@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f5f8fb">
+<title>SIR Admin</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --bg:#f3f6f9;--surface:#ffffff;--surface2:#f7fafc;--line:#dce5eb;
+  --text:#18313f;--muted:#6c808c;--accent:#27b99a;--accent2:#42a9e8;
+  --danger:#e45b67;--warning:#efaa3c;--shadow:0 12px 35px rgba(35,67,84,.10)
+}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#eef5f8 0,#f8fafc 42%,#eef3f6 100%);color:var(--text);font-family:Arial,sans-serif}
+button,input,select,textarea{font:inherit}
+.wrap{width:min(1180px,calc(100% - 24px));margin:auto;padding:24px 0 60px}
+.card,.order{background:rgba(255,255,255,.96);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow)}
+.login{max-width:440px;margin:9vh auto;padding:28px}
+.hidden{display:none!important}
+h1,h2,h3,p{margin-top:0}
+input,select,textarea{width:100%;padding:13px 14px;border-radius:13px;border:1px solid #cbd8df;background:#fff;color:var(--text);outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--accent2);box-shadow:0 0 0 3px rgba(66,169,232,.13)}
+.btn{border:0;border-radius:13px;padding:12px 16px;font-weight:900;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
+.ghost{background:#fff;color:var(--text);border:1px solid var(--line)}
+.danger{background:#fff2f3;color:#b83f4a;border:1px solid #f2c8cd}
+.top{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:18px}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{width:46px;height:46px;border-radius:15px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;color:#fff;font-weight:900}
+.tools{display:flex;gap:9px;flex-wrap:wrap}
+.bell{position:relative;font-size:21px;min-width:49px}
+.badge{position:absolute;right:-7px;top:-8px;background:var(--danger);color:#fff;border-radius:999px;min-width:22px;height:22px;font-size:12px;display:grid;place-items:center;padding:0 6px}
+.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.summary-card{background:#fff;border:1px solid var(--line);border-radius:17px;padding:16px;box-shadow:0 8px 24px rgba(35,67,84,.06)}
+.summary-card b{font-size:24px;display:block;margin-top:5px}
+.filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;background:#fff;border:1px solid var(--line);padding:12px;border-radius:16px}
+.filters select,.filters input{width:auto;min-width:190px;flex:1}
+.orders{display:grid;gap:15px}
+.order{padding:18px}
+.order.new{border-left:6px solid var(--warning)}
+.order-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.order-title{font-size:18px;font-weight:900}
+.muted{color:var(--muted)}
+.meta{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}
+.box{background:var(--surface2);padding:12px;border-radius:13px;border:1px solid #e8eef2;white-space:pre-wrap}
+.pill{padding:8px 11px;border-radius:999px;font-size:12px;font-weight:900;background:#edf3f6;color:#405764;white-space:nowrap}
+.pill.waiting{background:#fff2dc;color:#9a6200}
+.pill.review{background:#e7f1ff;color:#24689d}
+.pill.confirmed{background:#e9f8f2;color:#14725d}
+.pill.in_progress{background:#eeeaff;color:#5e43a5}
+.pill.completed{background:#e8f8ec;color:#2d7b42}
+.pill.cancelled{background:#fff0f1;color:#a33e47}
+.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}
+.actions select{width:auto;min-width:190px}
+.chat-panel{margin-top:14px;border-top:1px solid var(--line);padding-top:14px}
+.chat-toggle{width:100%;justify-content:space-between}
+.chat{margin-top:10px;background:#f7fafc;border:1px solid var(--line);border-radius:16px;padding:12px}
+.messages{display:grid;gap:9px;max-height:320px;overflow:auto;padding:4px}
+.message{max-width:85%;padding:10px 12px;border-radius:15px;background:#fff;border:1px solid #dfe8ed;box-shadow:0 4px 12px rgba(35,67,84,.06)}
+.message.admin{margin-left:auto;background:#e8f8f3;border-color:#c6eadf}
+.message small{display:block;color:var(--muted);margin-top:5px}
+.chat-compose{display:flex;gap:8px;margin-top:10px}
+.chat-compose textarea{min-height:48px;resize:vertical}
+.chat-compose button{min-width:112px}
+.status{min-height:20px;margin:8px 0 0}
+.ok{color:#148562}.err{color:var(--danger)}
+.empty{padding:30px;text-align:center}
+@media(max-width:800px){
+  .summary{grid-template-columns:1fr 1fr}.meta{grid-template-columns:1fr}
+  .order-head,.top{align-items:flex-start;flex-direction:column}
+  .actions>*{width:100%!important}.chat-compose{flex-direction:column}.chat-compose button{width:100%}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<section id="login" class="card login">
+  <div class="brand"><div class="logo">SIR</div><div><h1 style="margin-bottom:4px">Админ-панель</h1><div class="muted">Временный вход по PIN</div></div></div>
+  <input id="pin" type="password" inputmode="numeric" placeholder="Введите PIN" style="margin-top:22px">
+  <button id="loginBtn" class="btn primary" style="width:100%;margin-top:12px">Войти</button>
+  <p id="loginStatus" class="status"></p>
+</section>
+
+<section id="panel" class="hidden">
+  <div class="top">
+    <div class="brand"><div class="logo">SIR</div><div><h1 style="margin-bottom:4px">Заказы</h1><div id="sync" class="muted"></div></div></div>
+    <div class="tools">
+      <button id="bell" class="btn ghost bell" title="Новые заказы">🔔<span id="badge" class="badge">0</span></button>
+      <button id="refresh" class="btn ghost">Обновить</button>
+      <button id="logout" class="btn danger">Выйти</button>
+    </div>
+  </div>
+
+  <div class="summary">
+    <div class="summary-card"><span class="muted">В ожидании</span><b id="sumWaiting">0</b></div>
+    <div class="summary-card"><span class="muted">На рассмотрении</span><b id="sumReview">0</b></div>
+    <div class="summary-card"><span class="muted">В работе</span><b id="sumWork">0</b></div>
+    <div class="summary-card"><span class="muted">Выполнено</span><b id="sumDone">0</b></div>
+  </div>
+
+  <div class="filters">
+    <input id="search" placeholder="Поиск по имени, телефону или номеру заказа">
+    <select id="filterStatus">
+      <option value="">Все статусы</option>
+      <option value="waiting">В ожидании</option>
+      <option value="review">На рассмотрении</option>
+      <option value="confirmed">Подтверждён</option>
+      <option value="in_progress">В работе</option>
+      <option value="completed">Выполнен</option>
+      <option value="cancelled">Отменён</option>
+    </select>
+  </div>
+
+  <div id="orders" class="orders"></div>
+</section>
+</div>
+
+<script>
+const SUPABASE_URL="https://mvtijsrcydhqgxkcpazd.supabase.co";
+const SUPABASE_KEY="sb_publishable_Y3COvbBzvXq1diE8wdX9_A_oIBF99xv";
+const REVIEW_URL="https://g.page/r/CZd1G_ODAYcOEBM/review";
+const db=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
+let pin=sessionStorage.getItem("sir_admin_pin")||"";
+let orders=[];
+let messagesByOrder={};
+
+const labels={
+  waiting:"В ожидании",
+  review:"На рассмотрении",
+  confirmed:"Подтверждён",
+  in_progress:"В работе",
+  completed:"Выполнен",
+  cancelled:"Отменён"
+};
+const statuses=["waiting","review","confirmed","in_progress","completed","cancelled"];
+
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const cleanPhone=v=>{
+  let p=String(v||"").replace(/[^\d+]/g,"");
+  if(!p.startsWith("+"))p="+47"+p.replace(/^47/,"");
+  return p;
+};
+const statusClass=s=>s==="waiting"?"waiting":s==="review"?"review":s==="confirmed"?"confirmed":s==="in_progress"?"in_progress":s==="completed"?"completed":"cancelled";
+
+function smsLink(o){
+ const text=`Hei ${o.customer_name}! Takk for at du valgte SIR Rens & Pleie. Vi håper du er fornøyd med arbeidet. Vi setter stor pris på om du vil dele din ærlige erfaring på Google: ${REVIEW_URL} Takk for tilliten!`;
+ const sep=/iPhone|iPad|iPod/i.test(navigator.userAgent)?"&":"?";
+ return `sms:${cleanPhone(o.phone)}${sep}body=${encodeURIComponent(text)}`;
+}
+
+async function login(){
+ const v=document.querySelector("#pin").value.trim();
+ const s=document.querySelector("#loginStatus");
+ s.textContent="Проверка…";
+
+ if(v!=="1234"){
+   s.className="status err";
+   s.textContent="Неверный PIN.";
+   return;
+ }
+
+ pin=v;
+ sessionStorage.setItem("sir_admin_pin",pin);
+ document.querySelector("#login").classList.add("hidden");
+ document.querySelector("#panel").classList.remove("hidden");
+ await load();
+}
+document.querySelector("#loginBtn").onclick=login;
+document.querySelector("#pin").onkeydown=e=>{if(e.key==="Enter")login()};
+
+async function load(){
+ document.querySelector("#sync").textContent="Синхронизация…";
+ const {data,error}=await db.rpc("admin_list_orders",{p_pin:pin});
+ if(error){
+   document.querySelector("#sync").innerHTML=
+     '<span class="err">Панель открыта, но Supabase недоступна: '+String(error.message||error)+'</span><br>'+
+     '<span class="muted">Заказы и статусы не синхронизируются, пока не будет исправлена пара Project URL + Publishable Key.</span>';
+   orders=[];
+   updateSummary();
+   render();
+   return;
+ }
+ orders=(data||[]).map(o=>({...o,status:o.status==="sent"?"waiting":o.status}));
+ updateSummary();
+ render();
+ document.querySelector("#sync").textContent="Обновлено: "+new Date().toLocaleTimeString("ru-RU");
+}
+
+function updateSummary(){
+ const count=s=>orders.filter(o=>o.status===s).length;
+ const waiting=count("waiting");
+ document.querySelector("#sumWaiting").textContent=waiting;
+ document.querySelector("#sumReview").textContent=count("review");
+ document.querySelector("#sumWork").textContent=count("in_progress");
+ document.querySelector("#sumDone").textContent=count("completed");
+ document.querySelector("#badge").textContent=waiting;
+ document.querySelector("#badge").style.display=waiting?"grid":"none";
+}
+
+function detail(o){
+ const d=o.order_data||{},car=d.car||{},f=d.furniture||{};
+ let lines=[];
+ if(d.email)lines.push("E-mail: "+d.email);
+ if(car.brand||car.model)lines.push(`Автомобиль: ${car.brand||""} ${car.model||""} ${car.year||""} · ${car.type||""}`);
+ if(car.zones?.length)lines.push("Зоны: "+car.zones.join(", "));
+ if(f.quantity||f.size||f.material)lines.push(`Мебель: количество ${f.quantity||"—"}, размер ${f.size||"—"}, материал ${f.material||"—"}`);
+ if(f.problems?.length)lines.push("Проблемы: "+f.problems.join(", "));
+ return lines.join("\n");
+}
+
+function filteredOrders(){
+ const q=document.querySelector("#search").value.trim().toLowerCase();
+ const st=document.querySelector("#filterStatus").value;
+ return orders.filter(o=>{
+   const hay=`${o.order_number} ${o.customer_name} ${o.phone}`.toLowerCase();
+   return (!q||hay.includes(q))&&(!st||o.status===st);
+ });
+}
+
+function render(){
+ const box=document.querySelector("#orders");
+ const list=filteredOrders();
+ if(!list.length){box.innerHTML='<div class="card empty muted">Заказов нет или база Supabase недоступна.</div>';return}
+
+ box.innerHTML=list.map(o=>`<article class="order ${o.status==="waiting"?"new":""}" data-id="${o.id}">
+   <div class="order-head">
+     <div>
+       <div class="order-title">${esc(o.order_number)} · ${esc(o.customer_name)}</div>
+       <div class="muted">${esc(o.phone)} · ${esc(o.service)}</div>
+     </div>
+     <span class="pill ${statusClass(o.status)}">${esc(labels[o.status]||o.status)}</span>
+   </div>
+
+   <div class="meta">
+     <div class="box"><b>Адрес</b><br>${esc(o.address||"—")}</div>
+     <div class="box"><b>Создан</b><br>${new Date(o.created_at).toLocaleString("ru-RU")}</div>
+     <div class="box"><b>Обновлён</b><br>${new Date(o.updated_at).toLocaleString("ru-RU")}</div>
+   </div>
+
+   <div class="box"><b>Описание</b><br>${esc(o.problem||"—")}</div>
+   ${detail(o)?`<div class="box" style="margin-top:10px"><b>Детали</b><br>${esc(detail(o))}</div>`:""}
+
+   <div class="actions">
+     <select class="statusSelect">
+       ${statuses.map(x=>`<option value="${x}" ${o.status===x?"selected":""}>${labels[x]}</option>`).join("")}
+     </select>
+     <button class="btn primary save">Сохранить статус</button>
+     <a class="btn ghost" href="tel:${esc(cleanPhone(o.phone))}">Позвонить</a>
+     <a class="btn ghost" href="sms:${esc(cleanPhone(o.phone))}">Написать SMS</a>
+     ${o.status==="completed"?`<a class="btn ghost" href="${smsLink(o)}">SMS с отзывом</a>`:""}
+   </div>
+
+   <div class="chat-panel">
+     <button class="btn ghost chat-toggle"><span>💬 Сообщения и заметки</span><span>Открыть</span></button>
+     <div class="chat hidden">
+       <div class="messages"><div class="muted">Загрузка сообщений…</div></div>
+       <div class="chat-compose">
+         <textarea class="messageInput" placeholder="Напишите сообщение или внутреннюю заметку"></textarea>
+         <button class="btn primary sendMessage">Отправить</button>
+       </div>
+     </div>
+   </div>
+   <p class="status rowStatus"></p>
+ </article>`).join("");
+
+ document.querySelectorAll(".save").forEach(b=>b.onclick=()=>updateStatus(b.closest(".order")));
+ document.querySelectorAll(".chat-toggle").forEach(b=>b.onclick=()=>toggleChat(b.closest(".order")));
+ document.querySelectorAll(".sendMessage").forEach(b=>b.onclick=()=>sendMessage(b.closest(".order")));
+}
+
+async function updateStatus(row){
+ const id=row.dataset.id;
+ const status=row.querySelector(".statusSelect").value;
+ const s=row.querySelector(".rowStatus");
+ s.textContent="Сохранение…";
+ const {data,error}=await db.rpc("admin_update_order_v3",{p_pin:pin,p_id:id,p_status:status});
+ if(error||data!==true){s.className="status rowStatus err";s.textContent=error?.message||"Не сохранено";return}
+ s.className="status rowStatus ok";s.textContent="Статус сохранён";
+ await load();
+}
+
+async function toggleChat(row){
+ const chat=row.querySelector(".chat");
+ const btn=row.querySelector(".chat-toggle span:last-child");
+ chat.classList.toggle("hidden");
+ btn.textContent=chat.classList.contains("hidden")?"Открыть":"Закрыть";
+ if(!chat.classList.contains("hidden")) await loadMessages(row);
+}
+
+async function loadMessages(row){
+ const id=row.dataset.id;
+ const box=row.querySelector(".messages");
+ box.innerHTML='<div class="muted">Загрузка…</div>';
+ const {data,error}=await db.rpc("admin_list_order_messages",{p_pin:pin,p_order_id:id});
+ if(error){box.innerHTML=`<div class="err">${esc(error.message)}</div>`;return}
+ messagesByOrder[id]=data||[];
+ box.innerHTML=messagesByOrder[id].length
+ ?messagesByOrder[id].map(m=>`<div class="message ${m.author==="admin"?"admin":""}">${esc(m.message)}<small>${esc(m.author==="admin"?"Администратор":"Система")} · ${new Date(m.created_at).toLocaleString("ru-RU")}</small></div>`).join("")
+ :'<div class="muted">Сообщений пока нет.</div>';
+ box.scrollTop=box.scrollHeight;
+}
+
+async function sendMessage(row){
+ const id=row.dataset.id;
+ const input=row.querySelector(".messageInput");
+ const text=input.value.trim();
+ const s=row.querySelector(".rowStatus");
+ if(!text)return;
+ s.textContent="Отправка сообщения…";
+ const {data,error}=await db.rpc("admin_add_order_message",{p_pin:pin,p_order_id:id,p_message:text});
+ if(error||data!==true){s.className="status rowStatus err";s.textContent=error?.message||"Не отправлено";return}
+ input.value="";
+ s.className="status rowStatus ok";
+ s.textContent="Сообщение сохранено";
+ await loadMessages(row);
+}
+
+document.querySelector("#refresh").onclick=load;
+document.querySelector("#bell").onclick=()=>{
+ document.querySelector("#filterStatus").value="waiting";
+ render();
+ document.querySelector("#orders")?.scrollIntoView({behavior:"smooth"});
+};
+document.querySelector("#logout").onclick=()=>{sessionStorage.removeItem("sir_admin_pin");location.reload()};
+document.querySelector("#search").oninput=render;
+document.querySelector("#filterStatus").onchange=render;
+
+if(pin){
+ document.querySelector("#login").classList.add("hidden");
+ document.querySelector("#panel").classList.remove("hidden");
+ load();
+}
+setInterval(()=>{if(pin)load()},15000);
+</script>
+</body>
+</html>
