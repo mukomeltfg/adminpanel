@@ -1,0 +1,909 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f5f8fb">
+<title>SIR Admin</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --bg:#f3f6f9;--surface:#ffffff;--surface2:#f7fafc;--line:#dce5eb;
+  --text:#18313f;--muted:#6c808c;--accent:#27b99a;--accent2:#42a9e8;
+  --danger:#e45b67;--warning:#efaa3c;--shadow:0 12px 35px rgba(35,67,84,.10)
+}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#eef5f8 0,#f8fafc 42%,#eef3f6 100%);color:var(--text);font-family:Arial,sans-serif}
+button,input,select,textarea{font:inherit}
+.wrap{width:min(1180px,calc(100% - 24px));margin:auto;padding:24px 0 60px}
+.card,.order{background:rgba(255,255,255,.96);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow)}
+.login{max-width:440px;margin:9vh auto;padding:28px}
+.hidden{display:none!important}
+h1,h2,h3,p{margin-top:0}
+input,select,textarea{width:100%;padding:13px 14px;border-radius:13px;border:1px solid #cbd8df;background:#fff;color:var(--text);outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--accent2);box-shadow:0 0 0 3px rgba(66,169,232,.13)}
+.btn{border:0;border-radius:13px;padding:12px 16px;font-weight:900;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
+.ghost{background:#fff;color:var(--text);border:1px solid var(--line)}
+.danger{background:#fff2f3;color:#b83f4a;border:1px solid #f2c8cd}
+.top{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:18px}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{width:46px;height:46px;border-radius:15px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;color:#fff;font-weight:900}
+.tools{display:flex;gap:9px;flex-wrap:wrap}
+.bell{position:relative;font-size:21px;min-width:49px}
+.badge{position:absolute;right:-7px;top:-8px;background:var(--danger);color:#fff;border-radius:999px;min-width:22px;height:22px;font-size:12px;display:grid;place-items:center;padding:0 6px}
+.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.summary-card{background:#fff;border:1px solid var(--line);border-radius:17px;padding:16px;box-shadow:0 8px 24px rgba(35,67,84,.06)}
+.summary-card b{font-size:24px;display:block;margin-top:5px}
+.filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;background:#fff;border:1px solid var(--line);padding:12px;border-radius:16px}
+.filters select,.filters input{width:auto;min-width:190px;flex:1}
+.orders{display:grid;gap:15px}
+.order{padding:18px}
+.order.new{border-left:6px solid var(--warning)}
+.order-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.order-title{font-size:18px;font-weight:900}
+.muted{color:var(--muted)}
+.meta{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}
+.box{background:var(--surface2);padding:12px;border-radius:13px;border:1px solid #e8eef2;white-space:pre-wrap}
+.pill{padding:8px 11px;border-radius:999px;font-size:12px;font-weight:900;background:#edf3f6;color:#405764;white-space:nowrap}
+.pill.waiting{background:#fff2dc;color:#9a6200}
+.pill.review{background:#e7f1ff;color:#24689d}
+.pill.confirmed{background:#e9f8f2;color:#14725d}
+.pill.in_progress{background:#eeeaff;color:#5e43a5}
+.pill.completed{background:#e8f8ec;color:#2d7b42}
+.pill.cancelled{background:#fff0f1;color:#a33e47}
+.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}
+.actions select{width:auto;min-width:190px}
+.chat-panel{margin-top:14px;border-top:1px solid var(--line);padding-top:14px}
+.chat-toggle{width:100%;justify-content:space-between}
+.chat{margin-top:10px;background:#f7fafc;border:1px solid var(--line);border-radius:16px;padding:12px}
+.messages{display:grid;gap:9px;max-height:320px;overflow:auto;padding:4px}
+.message{max-width:85%;padding:10px 12px;border-radius:15px;background:#fff;border:1px solid #dfe8ed;box-shadow:0 4px 12px rgba(35,67,84,.06)}
+.message.admin{margin-left:auto;background:#e8f8f3;border-color:#c6eadf}
+.message small{display:block;color:var(--muted);margin-top:5px}
+.chat-compose{display:flex;gap:8px;margin-top:10px}
+.chat-compose textarea{min-height:48px;resize:vertical}
+.chat-compose button{min-width:112px}
+.status{min-height:20px;margin:8px 0 0}
+.ok{color:#148562}.err{color:var(--danger)}
+.empty{padding:30px;text-align:center}
+.nav-tabs{display:flex;gap:10px;margin:0 0 16px;flex-wrap:wrap}
+.nav-tab{background:#fff;color:var(--text);border:1px solid var(--line)}
+.nav-tab.active{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border-color:transparent}
+.completed-accounting{display:grid;gap:16px}
+.completed-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.completed-table-wrap{overflow:auto;background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow)}
+.completed-table{width:100%;border-collapse:collapse;min-width:820px}
+.completed-table th,.completed-table td{padding:13px 14px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.completed-table th{background:#f7fafc;position:sticky;top:0;z-index:1}
+.completed-table tr:last-child td{border-bottom:0}
+.completed-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.completed-actions input{flex:1;min-width:240px}
+@media(max-width:800px){.completed-summary{grid-template-columns:1fr}}
+.planner{display:grid;gap:16px}
+.planner-toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:end;background:#fff;border:1px solid var(--line);padding:14px;border-radius:18px;box-shadow:var(--shadow)}
+.planner-toolbar label{display:grid;gap:6px;font-weight:800;min-width:190px;flex:1}
+.planner-toolbar input,.planner-toolbar select{width:100%}
+.planner-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.plan-list{display:grid;gap:12px}
+.plan-card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:var(--shadow)}
+.plan-card.overdue{border-left:6px solid var(--danger)}
+.plan-card.today{border-left:6px solid var(--accent2)}
+.plan-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.plan-time{font-size:20px;font-weight:900;color:#24689d}
+.plan-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.plan-actions input{width:auto;min-width:150px}
+.order-plan{margin-top:10px;padding:10px 12px;border-radius:12px;background:#eef7ff;border:1px solid #cee5f5;color:#245c7f}
+.order-plan.overdue{background:#fff0f1;border-color:#f2c8cd;color:#a33e47}
+@media(max-width:800px){.planner-summary{grid-template-columns:1fr}.plan-head{flex-direction:column}.plan-actions input{width:100%}}
+.finance-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.finance-card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:var(--shadow)}
+.finance-card span{display:block;color:var(--muted);font-weight:800;margin-bottom:8px}
+.finance-card b{font-size:28px}
+.finance-positive{color:#16836d}.finance-negative{color:var(--danger)}
+.finance-table-wrap{overflow:auto;background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow)}
+.finance-table{width:100%;border-collapse:collapse;min-width:1250px}
+.finance-table th,.finance-table td{padding:11px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+.finance-table th{background:#f7fafc;position:sticky;top:0;z-index:1}
+.finance-table input,.finance-table select{min-width:115px;padding:10px;border-radius:10px}
+.finance-table .vehicle-input{min-width:220px}
+.finance-profit{font-weight:900}
+.finance-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.finance-actions input{flex:1;min-width:240px}
+@media(max-width:800px){.finance-summary{grid-template-columns:1fr 1fr}}
+.calendar-shell{background:#fff;border:1px solid var(--line);border-radius:20px;padding:16px;box-shadow:var(--shadow)}
+.calendar-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.calendar-title{font-size:22px;font-weight:900;text-transform:capitalize}
+.calendar-weekdays,.calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:7px}
+.calendar-weekdays div{text-align:center;color:var(--muted);font-size:12px;font-weight:900;padding:6px}
+.cal-day{min-height:88px;border:1px solid var(--line);border-radius:14px;padding:8px;background:#fff;cursor:pointer;position:relative;transition:.15s}
+.cal-day:hover{transform:translateY(-1px);box-shadow:0 8px 18px rgba(33,72,91,.10)}
+.cal-day.other{opacity:.38}.cal-day.selected{outline:3px solid rgba(68,169,231,.25);border-color:var(--accent2)}
+.cal-day.today .cal-num{background:var(--accent2);color:#fff}
+.cal-num{width:28px;height:28px;border-radius:999px;display:grid;place-items:center;font-weight:900}
+.cal-state{font-size:11px;font-weight:900;margin-top:8px}
+.cal-count{font-size:12px;color:var(--muted);margin-top:4px}
+.cal-day.free{background:#f1fbf7;border-color:#bfe8d9}.cal-day.partial{background:#fff9ea;border-color:#ead49a}.cal-day.busy{background:#fff0f1;border-color:#efb8bf}
+.legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px;font-size:12px;font-weight:800}
+.legend span{display:flex;align-items:center;gap:6px}.legend i{width:12px;height:12px;border-radius:4px;display:inline-block}
+.free-dot{background:#bfe8d9}.partial-dot{background:#ead49a}.busy-dot{background:#efb8bf}
+.day-layout{display:grid;grid-template-columns:1.15fr .85fr;gap:16px}
+.day-panel{background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:var(--shadow)}
+.slot-list{display:grid;gap:8px}.slot{padding:10px 12px;border-radius:12px;border:1px solid var(--line);display:flex;justify-content:space-between;gap:10px}
+.slot.free{background:#f1fbf7;border-color:#bfe8d9}.slot.busy{background:#fff0f1;border-color:#efb8bf}
+.plan-note{width:100%;min-width:180px}
+.conflict{color:var(--danger);font-weight:900}
+.no-conflict{color:#16836d;font-weight:900}
+@media(max-width:900px){.day-layout{grid-template-columns:1fr}.calendar-grid,.calendar-weekdays{gap:4px}.cal-day{min-height:70px;padding:6px}.cal-state{font-size:9px}.cal-count{font-size:10px}}
+@media(max-width:800px){
+  .summary{grid-template-columns:1fr 1fr}.meta{grid-template-columns:1fr}
+  .order-head,.top{align-items:flex-start;flex-direction:column}
+  .actions>*{width:100%!important}.chat-compose{flex-direction:column}.chat-compose button{width:100%}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<section id="login" class="card login">
+  <div class="brand"><div class="logo">SIR</div><div><h1 style="margin-bottom:4px">Админ-панель</h1><div class="muted">Временный вход по PIN</div></div></div>
+  <input id="pin" type="password" inputmode="numeric" placeholder="Введите PIN" style="margin-top:22px">
+  <button id="loginBtn" class="btn primary" style="width:100%;margin-top:12px">Войти</button>
+  <p id="loginStatus" class="status"></p>
+</section>
+
+<section id="panel" class="hidden">
+  <div class="top">
+    <div class="brand"><div class="logo">SIR</div><div><h1 style="margin-bottom:4px">Заказы</h1><div id="sync" class="muted"></div></div></div>
+    <div class="tools">
+      <button id="bell" class="btn ghost bell" title="Новые заказы">🔔<span id="badge" class="badge">0</span></button>
+      <button id="refresh" class="btn ghost">Обновить</button>
+      <button id="logout" class="btn danger">Выйти</button>
+    </div>
+  </div>
+
+  <div class="nav-tabs">
+    <button id="tabOrders" class="btn nav-tab active">Заказы</button>
+    <button id="tabPlanner" class="btn nav-tab">Планировщик работ</button>
+    <button id="tabCompleted" class="btn nav-tab">Учёт выполненных работ</button>
+    <button id="tabFinance" class="btn nav-tab">Финансовый учёт</button>
+  </div>
+
+  <div id="ordersView">
+  <div class="summary">
+    <div class="summary-card"><span class="muted">В ожидании</span><b id="sumWaiting">0</b></div>
+    <div class="summary-card"><span class="muted">На рассмотрении</span><b id="sumReview">0</b></div>
+    <div class="summary-card"><span class="muted">В работе</span><b id="sumWork">0</b></div>
+    <div class="summary-card"><span class="muted">Выполнено</span><b id="sumDone">0</b></div>
+  </div>
+
+  <div class="filters">
+    <input id="search" placeholder="Поиск по имени, телефону или номеру заказа">
+    <select id="filterStatus">
+      <option value="">Все статусы</option>
+      <option value="waiting">В ожидании</option>
+      <option value="review">На рассмотрении</option>
+      <option value="confirmed">Подтверждён</option>
+      <option value="in_progress">В работе</option>
+      <option value="completed">Выполнен</option>
+      <option value="cancelled">Отменён</option>
+    </select>
+  </div>
+
+  <div id="orders" class="orders"></div>
+  </div>
+
+  <div id="plannerView" class="planner hidden">
+    <div class="planner-toolbar">
+      <label>Рабочий день начинается
+        <input id="workStart" type="time" value="09:00">
+      </label>
+      <label>Рабочий день заканчивается
+        <input id="workEnd" type="time" value="18:00">
+      </label>
+      <label>Шаг свободных окон
+        <select id="slotStep">
+          <option value="30">30 минут</option>
+          <option value="60" selected>1 час</option>
+        </select>
+      </label>
+      <button id="saveWorkHours" class="btn primary">Сохранить часы</button>
+    </div>
+
+    <div class="calendar-shell">
+      <div class="calendar-head">
+        <button id="prevMonth" class="btn ghost">←</button>
+        <div id="calendarTitle" class="calendar-title"></div>
+        <button id="nextMonth" class="btn ghost">→</button>
+      </div>
+      <div class="calendar-weekdays">
+        <div>Пн</div><div>Вт</div><div>Ср</div><div>Чт</div><div>Пт</div><div>Сб</div><div>Вс</div>
+      </div>
+      <div id="calendarGrid" class="calendar-grid"></div>
+      <div class="legend">
+        <span><i class="free-dot"></i> Свободно</span>
+        <span><i class="partial-dot"></i> Частично занято</span>
+        <span><i class="busy-dot"></i> Полностью занято</span>
+      </div>
+    </div>
+
+    <div class="planner-summary">
+      <div class="summary-card"><span class="muted">Заказов на выбранный день</span><b id="planDayCount">0</b></div>
+      <div class="summary-card"><span class="muted">Свободных часов</span><b id="freeHoursCount">0</b></div>
+      <div class="summary-card"><span class="muted">Просрочено</span><b id="planOverdueCount">0</b></div>
+    </div>
+
+    <div class="day-layout">
+      <div class="day-panel">
+        <h3 id="selectedDayTitle">Работы на день</h3>
+        <div id="plannerList" class="plan-list"></div>
+      </div>
+      <div class="day-panel">
+        <h3>Свободные окна</h3>
+        <div id="freeSlots" class="slot-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="completedView" class="completed-accounting hidden">
+    <div class="completed-summary">
+      <div class="summary-card"><span class="muted">Выполнено всего</span><b id="doneAll">0</b></div>
+      <div class="summary-card"><span class="muted">Выполнено сегодня</span><b id="doneToday">0</b></div>
+      <div class="summary-card"><span class="muted">Выполнено в этом месяце</span><b id="doneMonth">0</b></div>
+    </div>
+
+    <div class="completed-actions">
+      <input id="completedSearch" placeholder="Поиск по клиенту, телефону, услуге или номеру заказа">
+      <button id="exportCompleted" class="btn ghost">Скачать CSV</button>
+    </div>
+
+    <div class="completed-table-wrap">
+      <table class="completed-table">
+        <thead>
+          <tr>
+            <th>Дата выполнения</th>
+            <th>Номер заказа</th>
+            <th>Клиент</th>
+            <th>Телефон</th>
+            <th>Услуга</th>
+            <th>Адрес</th>
+          </tr>
+        </thead>
+        <tbody id="completedBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="financeView" class="completed-accounting hidden">
+    <div class="finance-summary">
+      <div class="finance-card"><span>Выполненных работ</span><b id="financeCount">0</b></div>
+      <div class="finance-card"><span>Общая выручка</span><b id="financeRevenue" class="finance-positive">0 kr</b></div>
+      <div class="finance-card"><span>Общие расходы</span><b id="financeExpenses" class="finance-negative">0 kr</b></div>
+      <div class="finance-card"><span>Чистая прибыль</span><b id="financeProfit">0 kr</b></div>
+    </div>
+
+    <div class="finance-actions">
+      <input id="financeSearch" placeholder="Поиск по автомобилю, клиенту, телефону или номеру заказа">
+      <select id="financePeriod">
+        <option value="all">За всё время</option>
+        <option value="month">Текущий месяц</option>
+        <option value="year">Текущий год</option>
+      </select>
+      <button id="exportFinance" class="btn ghost">Скачать финансовый CSV</button>
+    </div>
+
+    <div class="finance-table-wrap">
+      <table class="finance-table">
+        <thead>
+          <tr>
+            <th>Дата</th><th>Заказ</th><th>Клиент</th><th>Автомобиль / объект</th>
+            <th>Услуга</th><th>Получено</th><th>Расходы</th><th>Прибыль</th>
+            <th>Оплата</th><th>Примечание</th><th>Сохранить</th>
+          </tr>
+        </thead>
+        <tbody id="financeBody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+</div>
+
+<script>
+const SUPABASE_URL="https://mvtijsrcydhqgxkcpazd.supabase.co";
+const SUPABASE_KEY="sb_publishable_Y3COvbBzvXq1diE8wdX9_A_oIBF99xv";
+const REVIEW_URL="https://g.page/r/CZd1G_ODAYcOEBM/review";
+const db=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
+let pin=sessionStorage.getItem("sir_admin_pin")||"";
+let orders=[];
+let messagesByOrder={};
+
+const labels={
+  waiting:"В ожидании",
+  review:"На рассмотрении",
+  confirmed:"Подтверждён",
+  in_progress:"В работе",
+  completed:"Выполнен",
+  cancelled:"Отменён"
+};
+const statuses=["waiting","review","confirmed","in_progress","completed","cancelled"];
+
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const cleanPhone=v=>{
+  let p=String(v||"").replace(/[^\d+]/g,"");
+  if(!p.startsWith("+"))p="+47"+p.replace(/^47/,"");
+  return p;
+};
+const statusClass=s=>s==="waiting"?"waiting":s==="review"?"review":s==="confirmed"?"confirmed":s==="in_progress"?"in_progress":s==="completed"?"completed":"cancelled";
+
+function smsLink(o){
+ const text=`Hei ${o.customer_name}! Takk for at du valgte SIR Rens & Pleie. Vi håper du er fornøyd med arbeidet. Vi setter stor pris på om du vil dele din ærlige erfaring på Google: ${REVIEW_URL} Takk for tilliten!`;
+ const sep=/iPhone|iPad|iPod/i.test(navigator.userAgent)?"&":"?";
+ return `sms:${cleanPhone(o.phone)}${sep}body=${encodeURIComponent(text)}`;
+}
+
+async function login(){
+ const v=document.querySelector("#pin").value.trim();
+ const s=document.querySelector("#loginStatus");
+ s.textContent="Проверка…";
+
+ if(v!=="1234"){
+   s.className="status err";
+   s.textContent="Неверный PIN.";
+   return;
+ }
+
+ pin=v;
+ sessionStorage.setItem("sir_admin_pin",pin);
+ document.querySelector("#login").classList.add("hidden");
+ document.querySelector("#panel").classList.remove("hidden");
+ await load();
+}
+document.querySelector("#loginBtn").onclick=login;
+document.querySelector("#pin").onkeydown=e=>{if(e.key==="Enter")login()};
+
+async function load(){
+ document.querySelector("#sync").textContent="Синхронизация…";
+ const {data,error}=await db.rpc("admin_list_orders",{p_pin:pin});
+ if(error){
+   document.querySelector("#sync").innerHTML=
+     '<span class="err">Панель открыта, но Supabase недоступна: '+String(error.message||error)+'</span><br>'+
+     '<span class="muted">Заказы и статусы не синхронизируются, пока не будет исправлена пара Project URL + Publishable Key.</span>';
+   orders=[];
+   updateSummary();
+   render();
+   return;
+ }
+ orders=(data||[]).map(o=>({...o,status:o.status==="sent"?"waiting":o.status}));
+ updateSummary();
+ render();
+ document.querySelector("#sync").textContent="Обновлено: "+new Date().toLocaleTimeString("ru-RU");
+}
+
+function updateSummary(){
+ const count=s=>orders.filter(o=>o.status===s).length;
+ const waiting=count("waiting");
+ document.querySelector("#sumWaiting").textContent=waiting;
+ document.querySelector("#sumReview").textContent=count("review");
+ document.querySelector("#sumWork").textContent=count("in_progress");
+ document.querySelector("#sumDone").textContent=count("completed");
+ document.querySelector("#badge").textContent=waiting;
+ document.querySelector("#badge").style.display=waiting?"grid":"none";
+ renderCompletedAccounting();
+}
+
+function completedOrders(){
+ return orders
+   .filter(o=>o.status==="completed")
+   .sort((a,b)=>new Date(b.updated_at)-new Date(a.updated_at));
+}
+
+function sameLocalDay(a,b){
+ return a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate();
+}
+
+function renderCompletedAccounting(){
+ const list=completedOrders();
+ const now=new Date();
+ const monthStart=new Date(now.getFullYear(),now.getMonth(),1);
+ document.querySelector("#doneAll").textContent=list.length;
+ document.querySelector("#doneToday").textContent=list.filter(o=>sameLocalDay(new Date(o.updated_at),now)).length;
+ document.querySelector("#doneMonth").textContent=list.filter(o=>new Date(o.updated_at)>=monthStart).length;
+
+ const q=(document.querySelector("#completedSearch")?.value||"").trim().toLowerCase();
+ const filtered=list.filter(o=>{
+   const hay=`${o.order_number} ${o.customer_name} ${o.phone} ${o.service} ${o.address||""}`.toLowerCase();
+   return !q||hay.includes(q);
+ });
+ const body=document.querySelector("#completedBody");
+ if(!body)return;
+ body.innerHTML=filtered.length?filtered.map(o=>`<tr>
+   <td>${new Date(o.updated_at).toLocaleString("ru-RU")}</td>
+   <td><b>${esc(o.order_number)}</b></td>
+   <td>${esc(o.customer_name)}</td>
+   <td><a href="tel:${esc(cleanPhone(o.phone))}">${esc(o.phone)}</a></td>
+   <td>${esc(o.service)}</td>
+   <td>${esc(o.address||"—")}</td>
+ </tr>`).join(""):'<tr><td colspan="6" class="muted" style="text-align:center;padding:28px">Выполненных работ пока нет.</td></tr>';
+}
+
+function exportCompletedCsv(){
+ const rows=completedOrders();
+ const quote=v=>`"${String(v??"").replace(/"/g,'""')}"`;
+ const csv=[
+   ["Дата выполнения","Номер заказа","Клиент","Телефон","Услуга","Адрес"],
+   ...rows.map(o=>[
+     new Date(o.updated_at).toLocaleString("ru-RU"),
+     o.order_number,
+     o.customer_name,
+     o.phone,
+     o.service,
+     o.address||""
+   ])
+ ].map(r=>r.map(quote).join(";")).join("\n");
+ const blob=new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8"});
+ const url=URL.createObjectURL(blob);
+ const a=document.createElement("a");
+ a.href=url;
+ a.download=`sir-vypolnennye-raboty-${new Date().toISOString().slice(0,10)}.csv`;
+ a.click();
+ URL.revokeObjectURL(url);
+}
+
+function detail(o){
+ const d=o.order_data||{},car=d.car||{},f=d.furniture||{};
+ let lines=[];
+ if(d.email)lines.push("E-mail: "+d.email);
+ if(car.brand||car.model)lines.push(`Автомобиль: ${car.brand||""} ${car.model||""} ${car.year||""} · ${car.type||""}`);
+ if(car.zones?.length)lines.push("Зоны: "+car.zones.join(", "));
+ if(f.quantity||f.size||f.material)lines.push(`Мебель: количество ${f.quantity||"—"}, размер ${f.size||"—"}, материал ${f.material||"—"}`);
+ if(f.problems?.length)lines.push("Проблемы: "+f.problems.join(", "));
+ return lines.join("\n");
+}
+
+function filteredOrders(){
+ const q=document.querySelector("#search").value.trim().toLowerCase();
+ const st=document.querySelector("#filterStatus").value;
+ return orders.filter(o=>{
+   const hay=`${o.order_number} ${o.customer_name} ${o.phone}`.toLowerCase();
+   return (!q||hay.includes(q))&&(!st||o.status===st);
+ });
+}
+
+const PLAN_STORAGE_KEY="sir_work_planner_v2";
+const WORK_HOURS_KEY="sir_work_hours_v1";
+let calendarMonth=new Date();
+let selectedPlanDate=todayIso();
+const plannerDrafts={};
+let plannerEditing=false;
+
+function readPlans(){
+ try{return JSON.parse(localStorage.getItem(PLAN_STORAGE_KEY)||"{}")||{}}
+ catch{return {}}
+}
+function writePlans(plans){localStorage.setItem(PLAN_STORAGE_KEY,JSON.stringify(plans))}
+function readWorkHours(){
+ try{return JSON.parse(localStorage.getItem(WORK_HOURS_KEY)||'{"start":"09:00","end":"18:00","step":60}')}
+ catch{return {start:"09:00",end:"18:00",step:60}}
+}
+function saveWorkHours(){
+ const data={start:document.querySelector("#workStart").value||"09:00",end:document.querySelector("#workEnd").value||"18:00",step:Number(document.querySelector("#slotStep").value||60)};
+ localStorage.setItem(WORK_HOURS_KEY,JSON.stringify(data));renderPlanner();
+}
+function getPlan(orderId){return readPlans()[orderId]||null}
+function planDateTime(plan){
+ if(!plan?.date)return null;
+ return new Date(`${plan.date}T${plan.time||"00:00"}:00`);
+}
+function planEndTime(plan){
+ const start=planDateTime(plan);if(!start)return null;
+ return new Date(start.getTime()+(Number(plan.duration)||180)*60000);
+}
+function todayIso(){
+ const d=new Date(),offset=d.getTimezoneOffset();
+ return new Date(d.getTime()-offset*60000).toISOString().slice(0,10);
+}
+function isoLocal(d){
+ const x=new Date(d.getTime()-d.getTimezoneOffset()*60000);return x.toISOString().slice(0,10);
+}
+function timeText(minutes){
+ const h=Math.floor(minutes/60),m=minutes%60;
+ return `${h?`${h} ч `:""}${m?`${m} мин`:""}`.trim();
+}
+function planInfoHtml(o){
+ const p=getPlan(o.id);if(!p)return "";
+ const dt=planDateTime(p),end=planEndTime(p),overdue=end&&end<new Date()&&o.status!=="completed";
+ return `<div class="order-plan ${overdue?"overdue":""}"><b>Запланировано:</b> ${dt.toLocaleString("ru-RU",{dateStyle:"medium",timeStyle:"short"})}–${end.toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"})} · ${timeText(Number(p.duration)||180)}${p.note?` · ${esc(p.note)}`:""}${overdue?" · ПРОСРОЧЕНО":""}</div>`;
+}
+function dayPlans(date,excludeId=null){
+ const plans=readPlans();
+ return orders.filter(o=>plans[o.id]&&plans[o.id].date===date&&o.id!==excludeId)
+   .map(o=>({order:o,plan:plans[o.id],start:planDateTime(plans[o.id]),end:planEndTime(plans[o.id])}))
+   .sort((a,b)=>a.start-b.start);
+}
+function hasConflict(date,time,duration,excludeId=null){
+ const start=new Date(`${date}T${time}:00`),end=new Date(start.getTime()+duration*60000);
+ return dayPlans(date,excludeId).some(x=>start<x.end&&end>x.start);
+}
+function capturePlannerDraft(row){
+ if(!row)return;
+ const id=String(row.dataset.id);
+ plannerDrafts[id]={
+   date:row.querySelector(".planDateInput")?.value||"",
+   time:row.querySelector(".planTimeInput")?.value||"",
+   duration:Number(row.querySelector(".planDurationInput")?.value||180),
+   note:row.querySelector(".planNoteInput")?.value||""
+ };
+ plannerEditing=true;
+}
+function plannerDisplayValue(orderId,field,fallback=""){
+ const draft=plannerDrafts[String(orderId)];
+ if(draft&&draft[field]!==undefined)return draft[field];
+ const saved=getPlan(orderId);
+ return saved?.[field]??fallback;
+}
+function clearPlannerDraft(orderId){
+ delete plannerDrafts[String(orderId)];
+ plannerEditing=Object.keys(plannerDrafts).length>0;
+}
+
+function saveOrderPlan(row){
+ const id=row.dataset.id,date=row.querySelector(".planDateInput").value,time=row.querySelector(".planTimeInput").value;
+ const duration=Number(row.querySelector(".planDurationInput").value||180),note=row.querySelector(".planNoteInput").value.trim(),status=row.querySelector(".rowStatus");
+ if(!date||!time){status.className="status rowStatus err";status.textContent="Выберите дату и время";return}
+ if(hasConflict(date,time,duration,id)){status.className="status rowStatus err";status.textContent="Это время пересекается с другой работой";return}
+ const plans=readPlans();plans[id]={date,time,duration,note,saved_at:new Date().toISOString()};writePlans(plans);
+ clearPlannerDraft(id);
+ selectedPlanDate=date;calendarMonth=new Date(`${date}T12:00:00`);
+ status.className="status rowStatus ok";status.textContent="Работа добавлена в план";
+ render();renderPlanner();
+}
+function clearOrderPlan(row){
+ const id=row.dataset.id;
+ const plans=readPlans();delete plans[id];writePlans(plans);clearPlannerDraft(id);render();renderPlanner();
+}
+function plannerItems(){
+ const plans=readPlans();
+ return orders.filter(o=>plans[o.id]).map(o=>({order:o,plan:plans[o.id],start:planDateTime(plans[o.id]),end:planEndTime(plans[o.id])}))
+   .filter(x=>x.start&&!Number.isNaN(x.start.getTime())).sort((a,b)=>a.start-b.start);
+}
+function workingRange(date){
+ const wh=readWorkHours();
+ return {start:new Date(`${date}T${wh.start}:00`),end:new Date(`${date}T${wh.end}:00`),step:Number(wh.step)||60};
+}
+function occupiedMinutes(date){
+ const range=workingRange(date);
+ return dayPlans(date).reduce((sum,x)=>{
+   const s=new Date(Math.max(x.start,range.start)),e=new Date(Math.min(x.end,range.end));
+   return sum+Math.max(0,(e-s)/60000);
+ },0);
+}
+function dayState(date){
+ const range=workingRange(date),total=(range.end-range.start)/60000,used=occupiedMinutes(date);
+ if(used<=0)return "free";if(used>=total-1)return "busy";return "partial";
+}
+function freeSlotsForDate(date){
+ const range=workingRange(date),plans=dayPlans(date),slots=[];
+ let cursor=new Date(range.start);
+ plans.forEach(x=>{
+   if(x.start>cursor)slots.push({start:new Date(cursor),end:new Date(Math.min(x.start,range.end))});
+   if(x.end>cursor)cursor=new Date(x.end);
+ });
+ if(cursor<range.end)slots.push({start:cursor,end:range.end});
+ return slots.filter(x=>x.end>x.start);
+}
+function renderCalendar(){
+ const grid=document.querySelector("#calendarGrid");if(!grid)return;
+ const year=calendarMonth.getFullYear(),month=calendarMonth.getMonth();
+ document.querySelector("#calendarTitle").textContent=new Intl.DateTimeFormat("ru-RU",{month:"long",year:"numeric"}).format(calendarMonth);
+ const first=new Date(year,month,1),mondayIndex=(first.getDay()+6)%7,start=new Date(year,month,1-mondayIndex);
+ let html="";
+ for(let i=0;i<42;i++){
+   const d=new Date(start);d.setDate(start.getDate()+i);
+   const iso=isoLocal(d),items=dayPlans(iso),state=dayState(iso);
+   html+=`<button class="cal-day ${state} ${d.getMonth()!==month?"other":""} ${iso===selectedPlanDate?"selected":""} ${iso===todayIso()?"today":""}" data-date="${iso}">
+     <span class="cal-num">${d.getDate()}</span>
+     <div class="cal-state">${state==="free"?"Свободно":state==="partial"?"Частично":"Занято"}</div>
+     <div class="cal-count">${items.length?`${items.length} работ`:"Нет записей"}</div>
+   </button>`;
+ }
+ grid.innerHTML=html;
+ grid.querySelectorAll(".cal-day").forEach(b=>b.onclick=()=>{selectedPlanDate=b.dataset.date;renderPlanner()});
+}
+function renderPlanner(){
+ const wh=readWorkHours();
+ document.querySelector("#workStart").value=wh.start;document.querySelector("#workEnd").value=wh.end;document.querySelector("#slotStep").value=String(wh.step||60);
+ renderCalendar();
+ const list=dayPlans(selectedPlanDate),now=new Date(),all=plannerItems();
+ document.querySelector("#planDayCount").textContent=list.length;
+ document.querySelector("#planOverdueCount").textContent=all.filter(x=>x.end<now&&x.order.status!=="completed").length;
+ const free=freeSlotsForDate(selectedPlanDate),freeMinutes=free.reduce((s,x)=>s+(x.end-x.start)/60000,0);
+ document.querySelector("#freeHoursCount").textContent=timeText(freeMinutes)||"0";
+ document.querySelector("#selectedDayTitle").textContent=`Работы на ${new Date(`${selectedPlanDate}T12:00:00`).toLocaleDateString("ru-RU",{dateStyle:"long"})}`;
+
+ const box=document.querySelector("#plannerList");
+ box.innerHTML=list.length?list.map(({order:o,plan:p,start,end})=>`<article class="plan-card ${end<now&&o.status!=="completed"?"overdue":sameLocalDay(start,now)?"today":""}" data-id="${o.id}">
+   <div class="plan-head"><div><div class="plan-time">${start.toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"})}–${end.toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"})}</div>
+   <div class="order-title">${esc(o.order_number)} · ${esc(o.customer_name)}</div><div class="muted">${esc(o.phone)} · ${esc(o.service)}</div></div>
+   <span class="pill ${statusClass(o.status)}">${esc(labels[o.status]||o.status)}</span></div>
+   <div class="meta"><div class="box"><b>Адрес</b><br>${esc(o.address||"—")}</div><div class="box"><b>Описание</b><br>${esc(o.problem||"—")}</div><div class="box"><b>Заметка</b><br>${esc(p.note||"—")}</div></div>
+   <div class="plan-actions">
+    <input class="plannerEditDate" type="date" value="${esc(p.date)}"><input class="plannerEditTime" type="time" value="${esc(p.time)}">
+    <select class="plannerEditDuration">${[60,90,120,180,240,300,360].map(m=>`<option value="${m}" ${Number(p.duration||180)===m?"selected":""}>${timeText(m)}</option>`).join("")}</select>
+    <input class="plannerEditNote plan-note" value="${esc(p.note||"")}" placeholder="Заметка">
+    <button class="btn primary plannerSave">Перенести</button><button class="btn danger plannerDelete">Удалить из плана</button>
+    <a class="btn ghost" href="tel:${esc(cleanPhone(o.phone))}">Позвонить</a>
+   </div><div class="status planStatus"></div></article>`).join(""):'<div class="card empty muted">На этот день работы не запланированы.</div>';
+
+ const freeBox=document.querySelector("#freeSlots");
+ freeBox.innerHTML=free.length?free.map(x=>`<div class="slot free"><b>${x.start.toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"})}–${x.end.toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"})}</b><span>${timeText((x.end-x.start)/60000)}</span></div>`).join(""):'<div class="slot busy"><b>Свободных окон нет</b><span>День полностью занят</span></div>';
+
+ box.querySelectorAll(".plannerSave").forEach(btn=>btn.onclick=()=>{
+   const card=btn.closest(".plan-card"),id=card.dataset.id,date=card.querySelector(".plannerEditDate").value,time=card.querySelector(".plannerEditTime").value,duration=Number(card.querySelector(".plannerEditDuration").value),note=card.querySelector(".plannerEditNote").value.trim(),status=card.querySelector(".planStatus");
+   if(hasConflict(date,time,duration,id)){status.className="status planStatus err";status.textContent="Это время пересекается с другой работой";return}
+   const plans=readPlans();plans[id]={date,time,duration,note,saved_at:new Date().toISOString()};writePlans(plans);selectedPlanDate=date;calendarMonth=new Date(`${date}T12:00:00`);renderPlanner();render();
+ });
+ box.querySelectorAll(".plannerDelete").forEach(btn=>btn.onclick=()=>{const id=btn.closest(".plan-card").dataset.id,plans=readPlans();delete plans[id];writePlans(plans);renderPlanner();render()});
+}
+const FINANCE_STORAGE_KEY="sir_finance_v1";
+
+function readFinance(){
+ try{return JSON.parse(localStorage.getItem(FINANCE_STORAGE_KEY)||"{}")||{}}
+ catch{return {}}
+}
+function writeFinance(data){localStorage.setItem(FINANCE_STORAGE_KEY,JSON.stringify(data))}
+function getFinance(orderId){return readFinance()[orderId]||{}}
+function num(v){const n=Number(String(v??"").replace(",", "."));return Number.isFinite(n)?n:0}
+function money(v){return `${Math.round(num(v)).toLocaleString("ru-RU")} kr`}
+function vehicleLabel(o){
+ const f=getFinance(o.id);
+ if(f.vehicle)return f.vehicle;
+ const parts=[o.car_brand,o.car_model,o.car_registration,o.object_type].filter(Boolean);
+ return parts.join(" ")||o.service||"—";
+}
+function financeRows(){
+ const now=new Date();
+ const period=document.querySelector("#financePeriod")?.value||"all";
+ return completedOrders().filter(o=>{
+   const d=new Date(o.updated_at);
+   if(period==="month")return d.getFullYear()===now.getFullYear()&&d.getMonth()===now.getMonth();
+   if(period==="year")return d.getFullYear()===now.getFullYear();
+   return true;
+ });
+}
+function renderFinance(){
+ const body=document.querySelector("#financeBody");
+ if(!body)return;
+ const q=(document.querySelector("#financeSearch")?.value||"").trim().toLowerCase();
+ const rows=financeRows().filter(o=>{
+   const f=getFinance(o.id);
+   return !q||`${o.order_number} ${o.customer_name} ${o.phone} ${o.service} ${vehicleLabel(o)} ${f.note||""}`.toLowerCase().includes(q);
+ });
+ const finance=readFinance();
+ let revenue=0,expenses=0;
+ rows.forEach(o=>{revenue+=num(finance[o.id]?.revenue);expenses+=num(finance[o.id]?.expenses)});
+ const profit=revenue-expenses;
+ document.querySelector("#financeCount").textContent=rows.length;
+ document.querySelector("#financeRevenue").textContent=money(revenue);
+ document.querySelector("#financeExpenses").textContent=money(expenses);
+ document.querySelector("#financeProfit").textContent=money(profit);
+ document.querySelector("#financeProfit").className=profit>=0?"finance-positive":"finance-negative";
+
+ body.innerHTML=rows.length?rows.map(o=>{
+   const f=finance[o.id]||{};
+   const p=num(f.revenue)-num(f.expenses);
+   return `<tr data-id="${o.id}">
+     <td>${new Date(o.updated_at).toLocaleDateString("ru-RU")}</td>
+     <td><b>${esc(o.order_number)}</b></td>
+     <td>${esc(o.customer_name)}<br><span class="muted">${esc(o.phone)}</span></td>
+     <td><input class="vehicle-input finVehicle" value="${esc(f.vehicle||vehicleLabel(o))}" placeholder="Марка, модель, номер"></td>
+     <td>${esc(o.service)}</td>
+     <td><input class="finRevenue" type="number" min="0" step="1" value="${esc(f.revenue??"")}" placeholder="0"></td>
+     <td><input class="finExpenses" type="number" min="0" step="1" value="${esc(f.expenses??"")}" placeholder="0"></td>
+     <td class="finance-profit ${p>=0?"finance-positive":"finance-negative"}">${money(p)}</td>
+     <td><select class="finPayment">
+       <option value="" ${!f.payment?"selected":""}>Не указано</option>
+       <option value="cash" ${f.payment==="cash"?"selected":""}>Наличные</option>
+       <option value="vipps" ${f.payment==="vipps"?"selected":""}>Vipps</option>
+       <option value="bank" ${f.payment==="bank"?"selected":""}>Банк</option>
+       <option value="invoice" ${f.payment==="invoice"?"selected":""}>Счёт</option>
+     </select></td>
+     <td><input class="finNote" value="${esc(f.note||"")}" placeholder="Примечание"></td>
+     <td><button class="btn primary finSave">Сохранить</button></td>
+   </tr>`;
+ }).join(""):'<tr><td colspan="11" class="muted" style="text-align:center;padding:28px">Выполненных работ для финансового учёта пока нет.</td></tr>';
+
+ body.querySelectorAll(".finSave").forEach(btn=>btn.onclick=()=>{
+   const row=btn.closest("tr"), id=row.dataset.id, data=readFinance();
+   data[id]={
+     vehicle:row.querySelector(".finVehicle").value.trim(),
+     revenue:num(row.querySelector(".finRevenue").value),
+     expenses:num(row.querySelector(".finExpenses").value),
+     payment:row.querySelector(".finPayment").value,
+     note:row.querySelector(".finNote").value.trim(),
+     updated_at:new Date().toISOString()
+   };
+   writeFinance(data);renderFinance();
+ });
+}
+function exportFinanceCsv(){
+ const finance=readFinance(), rows=financeRows();
+ const quote=v=>`"${String(v??"").replace(/"/g,'""')}"`;
+ const csv=[
+   ["Дата","Номер заказа","Клиент","Телефон","Автомобиль или объект","Услуга","Получено NOK","Расходы NOK","Прибыль NOK","Оплата","Примечание"],
+   ...rows.map(o=>{
+     const f=finance[o.id]||{};
+     return [new Date(o.updated_at).toLocaleDateString("ru-RU"),o.order_number,o.customer_name,o.phone,
+       f.vehicle||vehicleLabel(o),o.service,num(f.revenue),num(f.expenses),num(f.revenue)-num(f.expenses),
+       f.payment||"",f.note||""];
+   })
+ ].map(r=>r.map(quote).join(";")).join("\n");
+ const blob=new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8"});
+ const url=URL.createObjectURL(blob),a=document.createElement("a");
+ a.href=url;a.download=`sir-finansy-${new Date().toISOString().slice(0,10)}.csv`;a.click();URL.revokeObjectURL(url);
+}
+
+function render(){
+ const box=document.querySelector("#orders");
+ const list=filteredOrders();
+ if(!list.length){box.innerHTML='<div class="card empty muted">Заказов нет или база Supabase недоступна.</div>';return}
+
+ box.innerHTML=list.map(o=>`<article class="order ${o.status==="waiting"?"new":""}" data-id="${o.id}">
+   <div class="order-head">
+     <div>
+       <div class="order-title">${esc(o.order_number)} · ${esc(o.customer_name)}</div>
+       <div class="muted">${esc(o.phone)} · ${esc(o.service)}</div>
+     </div>
+     <span class="pill ${statusClass(o.status)}">${esc(labels[o.status]||o.status)}</span>
+   </div>
+
+   <div class="meta">
+     <div class="box"><b>Адрес</b><br>${esc(o.address||"—")}</div>
+     <div class="box"><b>Создан</b><br>${new Date(o.created_at).toLocaleString("ru-RU")}</div>
+     <div class="box"><b>Обновлён</b><br>${new Date(o.updated_at).toLocaleString("ru-RU")}</div>
+   </div>
+
+   <div class="box"><b>Описание</b><br>${esc(o.problem||"—")}</div>
+   ${detail(o)?`<div class="box" style="margin-top:10px"><b>Детали</b><br>${esc(detail(o))}</div>`:""}
+
+   ${planInfoHtml(o)}
+   <div class="actions">
+     <select class="statusSelect">
+       ${statuses.map(x=>`<option value="${x}" ${o.status===x?"selected":""}>${labels[x]}</option>`).join("")}
+     </select>
+     <button class="btn primary save">Сохранить статус</button>
+     <input class="planDateInput" type="date" value="${esc(plannerDisplayValue(o.id,"date",""))}" title="Дата работы">
+     <input class="planTimeInput" type="time" value="${esc(plannerDisplayValue(o.id,"time",""))}" title="Время начала">
+     <select class="planDurationInput" title="Продолжительность">
+       ${[60,90,120,180,240,300,360].map(m=>`<option value="${m}" ${Number(plannerDisplayValue(o.id,"duration",180))===m?"selected":""}>${m<60?m+" мин":m%60?Math.floor(m/60)+" ч "+m%60+" мин":m/60+" ч"}</option>`).join("")}
+     </select>
+     <input class="planNoteInput" value="${esc(plannerDisplayValue(o.id,"note",""))}" placeholder="Заметка к работе">
+     <button class="btn ghost savePlan">Запланировать</button>
+     <button class="btn danger clearPlan ${getPlan(o.id)?"":"hidden"}">Убрать из плана</button>
+     <a class="btn ghost" href="tel:${esc(cleanPhone(o.phone))}">Позвонить</a>
+     <a class="btn ghost" href="sms:${esc(cleanPhone(o.phone))}">Написать SMS</a>
+     ${o.status==="completed"?`<a class="btn ghost" href="${smsLink(o)}">SMS с отзывом</a>`:""}
+   </div>
+
+   <div class="chat-panel">
+     <button class="btn ghost chat-toggle"><span>💬 Сообщения и заметки</span><span>Открыть</span></button>
+     <div class="chat hidden">
+       <div class="messages"><div class="muted">Загрузка сообщений…</div></div>
+       <div class="chat-compose">
+         <textarea class="messageInput" placeholder="Напишите сообщение или внутреннюю заметку"></textarea>
+         <button class="btn primary sendMessage">Отправить</button>
+       </div>
+     </div>
+   </div>
+   <p class="status rowStatus"></p>
+ </article>`).join("");
+
+ document.querySelectorAll(".save").forEach(b=>b.onclick=()=>updateStatus(b.closest(".order")));
+ document.querySelectorAll(".planDateInput,.planTimeInput,.planDurationInput,.planNoteInput").forEach(el=>{
+   el.addEventListener("input",()=>capturePlannerDraft(el.closest(".order")));
+   el.addEventListener("change",()=>capturePlannerDraft(el.closest(".order")));
+ });
+ document.querySelectorAll(".savePlan").forEach(b=>b.onclick=()=>saveOrderPlan(b.closest(".order")));
+ document.querySelectorAll(".clearPlan").forEach(b=>b.onclick=()=>clearOrderPlan(b.closest(".order")));
+ document.querySelectorAll(".chat-toggle").forEach(b=>b.onclick=()=>toggleChat(b.closest(".order")));
+ document.querySelectorAll(".sendMessage").forEach(b=>b.onclick=()=>sendMessage(b.closest(".order")));
+}
+
+async function updateStatus(row){
+ const id=row.dataset.id;
+ const status=row.querySelector(".statusSelect").value;
+ const s=row.querySelector(".rowStatus");
+ s.textContent="Сохранение…";
+ const {data,error}=await db.rpc("admin_update_order_v3",{p_pin:pin,p_id:id,p_status:status});
+ if(error||data!==true){s.className="status rowStatus err";s.textContent=error?.message||"Не сохранено";return}
+ s.className="status rowStatus ok";s.textContent="Статус сохранён";
+ await load();
+}
+
+async function toggleChat(row){
+ const chat=row.querySelector(".chat");
+ const btn=row.querySelector(".chat-toggle span:last-child");
+ chat.classList.toggle("hidden");
+ btn.textContent=chat.classList.contains("hidden")?"Открыть":"Закрыть";
+ if(!chat.classList.contains("hidden")) await loadMessages(row);
+}
+
+async function loadMessages(row){
+ const id=row.dataset.id;
+ const box=row.querySelector(".messages");
+ box.innerHTML='<div class="muted">Загрузка…</div>';
+ const {data,error}=await db.rpc("admin_list_order_messages",{p_pin:pin,p_order_id:id});
+ if(error){box.innerHTML=`<div class="err">${esc(error.message)}</div>`;return}
+ messagesByOrder[id]=data||[];
+ box.innerHTML=messagesByOrder[id].length
+ ?messagesByOrder[id].map(m=>`<div class="message ${m.author==="admin"?"admin":""}">${esc(m.message)}<small>${esc(m.author==="admin"?"Администратор":"Система")} · ${new Date(m.created_at).toLocaleString("ru-RU")}</small></div>`).join("")
+ :'<div class="muted">Сообщений пока нет.</div>';
+ box.scrollTop=box.scrollHeight;
+}
+
+async function sendMessage(row){
+ const id=row.dataset.id;
+ const input=row.querySelector(".messageInput");
+ const text=input.value.trim();
+ const s=row.querySelector(".rowStatus");
+ if(!text)return;
+ s.textContent="Отправка сообщения…";
+ const {data,error}=await db.rpc("admin_add_order_message",{p_pin:pin,p_order_id:id,p_message:text});
+ if(error||data!==true){s.className="status rowStatus err";s.textContent=error?.message||"Не отправлено";return}
+ input.value="";
+ s.className="status rowStatus ok";
+ s.textContent="Сообщение сохранено";
+ await loadMessages(row);
+}
+
+document.querySelector("#refresh").onclick=load;
+document.querySelector("#bell").onclick=()=>{
+ document.querySelector("#filterStatus").value="waiting";
+ render();
+ document.querySelector("#orders")?.scrollIntoView({behavior:"smooth"});
+};
+document.querySelector("#logout").onclick=()=>{sessionStorage.removeItem("sir_admin_pin");location.reload()};
+document.querySelector("#search").oninput=render;
+document.querySelector("#filterStatus").onchange=render;
+document.querySelector("#completedSearch").oninput=renderCompletedAccounting;
+document.querySelector("#exportCompleted").onclick=exportCompletedCsv;
+document.querySelector("#financeSearch").oninput=renderFinance;
+document.querySelector("#financePeriod").onchange=renderFinance;
+document.querySelector("#exportFinance").onclick=exportFinanceCsv;
+
+function setAdminView(view){
+ const isOrders=view==="orders",isPlanner=view==="planner",isCompleted=view==="completed",isFinance=view==="finance";
+ document.querySelector("#ordersView").classList.toggle("hidden",!isOrders);
+ document.querySelector("#plannerView").classList.toggle("hidden",!isPlanner);
+ document.querySelector("#completedView").classList.toggle("hidden",!isCompleted);
+ document.querySelector("#financeView").classList.toggle("hidden",!isFinance);
+ document.querySelector("#tabOrders").classList.toggle("active",isOrders);
+ document.querySelector("#tabPlanner").classList.toggle("active",isPlanner);
+ document.querySelector("#tabCompleted").classList.toggle("active",isCompleted);
+ document.querySelector("#tabFinance").classList.toggle("active",isFinance);
+ if(isPlanner)renderPlanner();
+ if(isCompleted)renderCompletedAccounting();
+ if(isFinance)renderFinance();
+}
+document.querySelector("#tabOrders").onclick=()=>setAdminView("orders");
+document.querySelector("#tabPlanner").onclick=()=>setAdminView("planner");
+document.querySelector("#tabCompleted").onclick=()=>setAdminView("completed");
+document.querySelector("#tabFinance").onclick=()=>setAdminView("finance");
+document.querySelector("#prevMonth").onclick=()=>{calendarMonth=new Date(calendarMonth.getFullYear(),calendarMonth.getMonth()-1,1);renderPlanner()};
+document.querySelector("#nextMonth").onclick=()=>{calendarMonth=new Date(calendarMonth.getFullYear(),calendarMonth.getMonth()+1,1);renderPlanner()};
+document.querySelector("#saveWorkHours").onclick=saveWorkHours;
+
+if(pin){
+ document.querySelector("#login").classList.add("hidden");
+ document.querySelector("#panel").classList.remove("hidden");
+ load();
+}
+setInterval(()=>{
+ if(!pin)return;
+ const active=document.activeElement;
+ const editingField=active?.matches?.(".planDateInput,.planTimeInput,.planDurationInput,.planNoteInput");
+ if(plannerEditing||editingField)return;
+ load();
+},15000);
+</script>
+</body>
+</html>
